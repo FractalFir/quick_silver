@@ -11,7 +11,6 @@ pub enum ConstantItem{
     Float(f32),
     Long(i64),
     Int(i32),
-    INVALID,
 }
 impl ConstantItem{
     pub fn read(f:&mut File)->ConstantItem{
@@ -73,10 +72,8 @@ impl ConstantItem{
 pub fn read_constant_item_pool(f:&mut File)->Box<[ConstantItem]>{
     let len = read_u16_be(f) - 1;
     let mut pool = Vec::with_capacity(len as usize);
-    println!("len:{len}");
     for i in 0..len{
         let item = ConstantItem::read(f);
-        println!("{i}: {item:?}");
         pool.push(item);
     }
     return pool.into();
