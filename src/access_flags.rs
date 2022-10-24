@@ -4,6 +4,50 @@ pub struct ClassAccessFlags{
 pub struct FieldAccessFlags{
     flags:u16,
 }
+pub struct MethodAccessFlags{
+    flags:u16,
+}
+impl MethodAccessFlags{
+    pub fn from_u16(flags:u16)->Self{
+        Self{flags}
+    }
+    pub fn is_public(&self)->bool{
+        (self.flags & 0x1) != 0
+    }
+    pub fn is_private(&self)->bool{
+        (self.flags & 0x2) != 0
+    }
+    pub fn is_protected(&self)->bool{
+        (self.flags & 0x4) != 0
+    }
+    pub fn is_static(&self)->bool{
+        (self.flags & 0x8) != 0
+    }
+    pub fn is_final(&self)->bool{
+        (self.flags & 0x10) != 0
+    }
+    pub fn is_synchronized(&self)->bool{
+        (self.flags & 0x20) != 0
+    }
+    pub fn is_bridge(&self)->bool{
+        (self.flags & 0x40) != 0
+    }
+    pub fn is_varargs(&self)->bool{
+        (self.flags & 0x80) != 0
+    }
+    pub fn is_native(&self)->bool{
+        (self.flags & 0x100) != 0
+    }
+    pub fn is_abstract(&self)->bool{
+        (self.flags & 0x400) != 0
+    }
+    pub fn is_strict(&self)->bool{
+        (self.flags & 0x800) != 0
+    }
+    pub fn is_synthetic(&self)->bool{
+        (self.flags & 0x1000) != 0
+    }
+}
 impl ClassAccessFlags{
     pub fn from_u16(flags:u16)->ClassAccessFlags{
         ClassAccessFlags{flags}
@@ -65,6 +109,23 @@ impl FieldAccessFlags{
         (self.flags & 0x4000) != 0
     }
 }
+impl std::fmt::Display for MethodAccessFlags{
+    fn fmt(&self,f:&mut std::fmt::Formatter)->Result<(), std::fmt::Error>{
+        let public = self.is_public();
+        let private = self.is_private();
+        let protected = self.is_protected();
+        let r#static = self.is_static();
+        let r#final = self.is_final();
+        let synchronized = self.is_synchronized();
+        let bridge = self.is_bridge();
+        let varargs = self.is_varargs();
+        let native = self.is_native();
+        let r#abstract = self.is_abstract();
+        let strict = self.is_strict();
+        let synthetic = self.is_synthetic();
+        write!(f,"{{public:{public}, private:{private}, protected:{protected}, static:{static}, final:{final}, synchronized:{synchronized},bridge:{bridge}, varargs:{varargs}, native:{native}, abstract:{abstract}, strict:{strict}, synthetic:{synthetic}}}")
+    }
+}
 impl std::fmt::Display for FieldAccessFlags{
     fn fmt(&self,f:&mut std::fmt::Formatter)->Result<(), std::fmt::Error>{
         let public = self.is_public();
@@ -100,6 +161,11 @@ impl Debug for ClassAccessFlags{
     }
 }
 impl Debug for FieldAccessFlags{
+    fn fmt(&self,f:&mut std::fmt::Formatter)->Result<(), std::fmt::Error>{
+        <Self as std::fmt::Display>::fmt(self,f)
+    }
+}
+impl Debug for MethodAccessFlags{
     fn fmt(&self,f:&mut std::fmt::Formatter)->Result<(), std::fmt::Error>{
         <Self as std::fmt::Display>::fmt(self,f)
     }
