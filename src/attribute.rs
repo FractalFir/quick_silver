@@ -6,6 +6,8 @@ use crate::code::*;
 pub enum Attribute{
     Code(Code),
     LineNumberTable(Box<[(u16,u16)]>),
+    ConstantValue(u16),
+    LocalVaraibleTable(Box<[(u16,u16,String,String,u16)]>)
 }
 pub fn read_attributes(attribute_count:usize,f:&mut File,constant_items:&[ConstantItem])->Box<[Attribute]>{
     let mut res = Vec::with_capacity(attribute_count);
@@ -31,6 +33,22 @@ impl Attribute{
                 }
                 let res:Box<[(u16,u16)]> = res.into();
                 Attribute::LineNumberTable(res)
+            },
+            "ConstantValue"=>{
+                Attribute::ConstantValue(read_u16_be(f))
+            },
+            "LocalVariableTable"=>{
+                let local_variable_table_length = read_u16_be(f);
+                let mut lvt = Vec::with_capacity(local_variable_table_length as usize);
+                for _ in 0..local_variable_table_length{
+                    let start_pc = read_u16_be(f);
+                    let length = read_u16_be(f);
+                    let name = crate::constant_item::name_from_index(read_u16_be(f),constant_items);
+                    let descrpitor = crate::constant_item::name_from_index(read_u16_be(f),constant_items);
+                    let index = read_u16_be(f);
+                    lvt.push((start_pc,length,name,descrpitor,index));
+                }
+                Attribute::LocalVaraibleTable(lvt.into())
             },
             _=>panic!("Unsupported attribute:{name}!"),
         }

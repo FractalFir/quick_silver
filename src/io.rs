@@ -32,6 +32,13 @@ pub fn read_u16_be<T:Read>(f:&mut T)->u16{
     }
     u16::from_be_bytes(bytes)  
 }
+pub fn read_i16_be<T:Read>(f:&mut T)->i16{
+    let mut bytes = [0;2];
+    if f.read(&mut bytes).expect("Could not read bytes") != 2{
+        panic!("Could not read bytes!");
+    }
+    i16::from_be_bytes(bytes)  
+}
 pub fn read_f64_be<T:Read>(f:&mut T)->f64{
     let mut bytes = [0;8];
     if f.read(&mut bytes).expect("Could not read bytes") != 8{

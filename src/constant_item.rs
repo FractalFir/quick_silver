@@ -2,6 +2,9 @@ use crate::*;
 #[derive(Debug)]
 pub enum ConstantItem{
     MethodRef(u16,u16),
+    InterfaceMethodRef(u16,u16),
+    InvokeDynamic(u16,u16),
+    MethodHandle(u8,u16),
     FieldRef(u16,u16),
     Class(u16),
     NameAndType(u16,u16),
@@ -29,6 +32,13 @@ pub fn method_from_index(index:u16,constant_items:&[ConstantItem])->(String,(Str
     };
     (class_name_from_index(*index.0,constant_items),name_and_type_from_index(*index.1,constant_items))
 }
+pub fn interface_method_from_index(index:u16,constant_items:&[ConstantItem])->(String,(String,String)){
+    let index = match &constant_items[(index as usize) - 1]{
+        ConstantItem::InterfaceMethodRef(name_index,type_index)=>(name_index,type_index),
+        _=>panic!("Expected method ref to get data from but got {:?}",&constant_items[(index as usize) - 1]), //TODO: more precise error message
+    };
+    (class_name_from_index(*index.0,constant_items),name_and_type_from_index(*index.1,constant_items))
+}
 pub fn name_and_type_from_index(index:u16,constant_items:&[ConstantItem])->(String,String){
     let index = match &constant_items[(index as usize) - 1]{
         ConstantItem::NameAndType(name_index,type_index)=>(name_index,type_index),
@@ -46,20 +56,6 @@ impl ConstantItem{
     pub fn read(f:&mut File)->ConstantItem{
         let const_type = read_u8(f);
         match const_type{
-            10=>{
-                let class_index = read_u16_be(f);
-                let name_and_type_index = read_u16_be(f);
-                ConstantItem::MethodRef(class_index,name_and_type_index)
-            },
-            7=>{
-                let name_and_type_index = read_u16_be(f);
-                ConstantItem::Class(name_and_type_index)
-            },
-            12=>{
-                let name_index = read_u16_be(f);
-                let type_index = read_u16_be(f);
-                ConstantItem::NameAndType(name_index,type_index)
-            },
             1=>{
                 let len = read_u16_be(f);
                 let mut bytes = vec![0;len as usize];
@@ -68,19 +64,9 @@ impl ConstantItem{
                     std::str::from_utf8(&bytes).expect("UTF8 constant pool item not a valid UTF8 string").to_owned()
                 )
             },
-            9=>{
-                let class_index = read_u16_be(f);
-                let name_and_type_index = read_u16_be(f);
-                ConstantItem::FieldRef(class_index,name_and_type_index)
-            },
-            8=>{
-                let string_index = read_u16_be(f);
-                ConstantItem::String(string_index)
-            },
-            6=>{
-                todo!("doubles are not yet supported(they are buggy)");
-                let double = read_f64_be(f);
-                ConstantItem::Double(double)
+            3=>{
+                let int = read_i32_be(f);
+                ConstantItem::Int(int)
             },
             4=>{
                 let float = read_f32_be(f);
@@ -91,10 +77,50 @@ impl ConstantItem{
                 let long = read_i64_be(f);
                 ConstantItem::Long(long)
             },
-            3=>{
-                let int = read_i32_be(f);
-                ConstantItem::Int(int)
+            6=>{
+                todo!("doubles are not yet supported(they are buggy)");
+                let double = read_f64_be(f);
+                ConstantItem::Double(double)
             },
+            7=>{
+                let name_and_type_index = read_u16_be(f);
+                ConstantItem::Class(name_and_type_index)
+            },
+            9=>{
+                let class_index = read_u16_be(f);
+                let name_and_type_index = read_u16_be(f);
+                ConstantItem::FieldRef(class_index,name_and_type_index)
+            },
+            8=>{
+                let string_index = read_u16_be(f);
+                ConstantItem::String(string_index)
+            },
+            10=>{
+                let class_index = read_u16_be(f);
+                let name_and_type_index = read_u16_be(f);
+                ConstantItem::MethodRef(class_index,name_and_type_index)
+            },
+            11=>{
+                let class_index = read_u16_be(f);
+                let name_and_type_index = read_u16_be(f);
+                //IFACE
+                ConstantItem::InterfaceMethodRef(class_index,name_and_type_index)
+            },
+            12=>{
+                let name_index = read_u16_be(f);
+                let type_index = read_u16_be(f);
+                ConstantItem::NameAndType(name_index,type_index)
+            },
+            15=>{
+                let reference_kind = read_u8(f);
+                let reference_index = read_u16_be(f);
+                ConstantItem::MethodHandle(reference_kind,reference_index)
+            },
+            18=>{
+                let bootstrap_method_attr_index = read_u16_be(f);
+                let name_and_type_index = read_u16_be(f);
+                ConstantItem::InvokeDynamic(bootstrap_method_attr_index,name_and_type_index)
+            }
             _=>panic!("Unsuported Const Item Type '{const_type}'"),
         }
     }

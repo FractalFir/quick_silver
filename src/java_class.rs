@@ -40,6 +40,15 @@ impl JavaClass{
         let res:Box<[Field]> = res.into();
         res
     }
+    pub fn in_directory(path:&str)->Box<[Self]>{
+        let paths = std::fs::read_dir(path).expect("Could not get directory {path}");
+        let mut res = Vec::new();
+        for path in paths {
+            let mut f:File  = File::open(path.unwrap().path()).expect("Could not open file!");
+            res.push(Self::from_file(&mut f).expect("Not a vaild Java class!"));
+        }
+        res.into()
+    }
     pub fn from_file(f:&mut File)->Option<Self>{
         let magic:u32 = read_u32_be(f);
         if magic != 0xCAFEBABE{

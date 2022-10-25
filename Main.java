@@ -17,6 +17,12 @@ public class Main implements TestIface{
   public static void Main(String[] args){
       int a = 2 + 2;
       int b = a * a;
+      try{
+          String s = null;
+      }
+      catch(Exception e){
+      
+      }
       System.out.println("Hello World");
   }
 }
