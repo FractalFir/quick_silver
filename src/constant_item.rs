@@ -12,6 +12,36 @@ pub enum ConstantItem{
     Long(i64),
     Int(i32),
 }
+pub fn read_float_at_index(constant_items:&[ConstantItem])->f32{
+    todo!();
+}
+pub fn class_name_from_index(index:u16,constant_items:&[ConstantItem])->String{
+    let class_name_index = match &constant_items[(index as usize) - 1]{
+        ConstantItem::Class(class_name_index)=>class_name_index,
+        _=>panic!("Expected class info to get name from but got {:?}",&constant_items[(index as usize) - 1]), //TODO: more precise error message
+    };
+    name_from_index(*class_name_index,constant_items)
+}
+pub fn method_from_index(index:u16,constant_items:&[ConstantItem])->(String,(String,String)){
+    let index = match &constant_items[(index as usize) - 1]{
+        ConstantItem::MethodRef(name_index,type_index)=>(name_index,type_index),
+        _=>panic!("Expected method ref to get data from but got {:?}",&constant_items[(index as usize) - 1]), //TODO: more precise error message
+    };
+    (class_name_from_index(*index.0,constant_items),name_and_type_from_index(*index.1,constant_items))
+}
+pub fn name_and_type_from_index(index:u16,constant_items:&[ConstantItem])->(String,String){
+    let index = match &constant_items[(index as usize) - 1]{
+        ConstantItem::NameAndType(name_index,type_index)=>(name_index,type_index),
+        _=>panic!("Expected method ref to get data from but got {:?}",&constant_items[(index as usize) - 1]), //TODO: more precise error message
+    };
+    (name_from_index(*index.0,constant_items),name_from_index(*index.1,constant_items))
+}
+pub fn name_from_index(index:u16,constant_items:&[ConstantItem])->String{
+    match &constant_items[(index as usize) - 1]{
+        ConstantItem::UTF8(class_name)=>class_name.to_owned(),
+        _=>panic!("Expected UTF8., but got {:?}!",&constant_items[(index as usize) - 1]), //TODO: more precise error message
+    }
+}
 impl ConstantItem{
     pub fn read(f:&mut File)->ConstantItem{
         let const_type = read_u8(f);

@@ -14,8 +14,8 @@ pub struct Method{
 impl Method{
      pub fn read(f:&mut File,constant_items:&[ConstantItem])->Method{
         let access_flags = MethodAccessFlags::from_u16(read_u16_be(f));
-        let name = crate::java_class::name_from_index(read_u16_be(f),constant_items);
-        let descriptor = crate::java_class::name_from_index(read_u16_be(f),constant_items);
+        let name = crate::constant_item::name_from_index(read_u16_be(f),constant_items);
+        let descriptor = crate::constant_item::name_from_index(read_u16_be(f),constant_items);
         let attribute_count = read_u16_be(f);
         let attributes = read_attributes(attribute_count as usize,f,constant_items);
         Self{access_flags,name,descriptor,attributes}

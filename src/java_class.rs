@@ -15,19 +15,6 @@ pub struct JavaClass{
     fields:Box<[Field]>,
     methods:Box<[Method]>,
 }
-pub fn class_name_from_index(index:u16,constant_items:&[ConstantItem])->String{
-    let class_name_index = match &constant_items[(index as usize) - 1]{
-        ConstantItem::Class(class_name_index)=>class_name_index,
-        _=>panic!("Expected class info to get name from but got {:?}",&constant_items[index as usize]), //TODO: more precise error message
-    };
-    name_from_index(*class_name_index,constant_items)
-}
-pub fn name_from_index(index:u16,constant_items:&[ConstantItem])->String{
-    match &constant_items[(index as usize) - 1]{
-        ConstantItem::UTF8(class_name)=>class_name.to_owned(),
-        _=>panic!("Expected UTF8."), //TODO: more precise error message
-    }
-}
 impl JavaClass{
     fn read_interafeces(interface_count:usize,constant_items:&[ConstantItem],f:&mut File)->Box<[String]>{
         let mut res = Vec::with_capacity(interface_count);
@@ -65,8 +52,8 @@ impl JavaClass{
         }
         let items = read_constant_item_pool(f);
         let access_flags = ClassAccessFlags::from_u16(read_u16_be(f));
-        let this_class = class_name_from_index(read_u16_be(f),&items);
-        let super_class = class_name_from_index(read_u16_be(f),&items);
+        let this_class = constant_item::class_name_from_index(read_u16_be(f),&items);
+        let super_class = constant_item::class_name_from_index(read_u16_be(f),&items);
         let interface_count = read_u16_be(f);
         let interfaces = Self::read_interafeces(interface_count as usize,&items,f);
         let field_count = read_u16_be(f);

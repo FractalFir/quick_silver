@@ -7,6 +7,7 @@ mod field;
 mod io;
 mod attribute;
 mod method;
+mod code;
 use java_class::*;
 pub(crate) use io::*;
 fn main() {
