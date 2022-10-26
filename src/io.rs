@@ -25,6 +25,11 @@ pub fn read_u8<T:Read>(f:&mut T)->u8{
     f.read(&mut byte).expect("Could not read byte");
     byte[0]
 }
+pub fn read_i8<T:Read>(f:&mut T)->i8{
+    let mut byte = [0;1];
+    f.read(&mut byte).expect("Could not read byte");
+    i8::from_be_bytes(byte)
+}
 pub fn read_u16_be<T:Read>(f:&mut T)->u16{
     let mut bytes = [0;2];
     if f.read(&mut bytes).expect("Could not read bytes") != 2{

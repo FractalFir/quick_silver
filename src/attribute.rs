@@ -3,6 +3,65 @@ use crate::*;
 use crate::constant_item::ConstantItem;
 use crate::code::*;
 #[derive(Debug)]
+enum VerificationTypeInfo{
+    TopVaraible,
+    IntegerVariable,
+    FloatVariable,
+    LongVariable,
+    DoubleVariable,
+    NullVariable,
+    UninitializedThisVaraible,
+    ObjectVariable,
+    UninitializedVaraible,
+}
+impl VerificationTypeInfo{
+    pub fn read(f:&mut File,constant_items:&[ConstantItem])->Self{
+        let tag = read_u8(f);
+        match tag{
+            _=>todo!("Unhandled VerificationTypeInfo: {tag}"),
+        }
+    }
+}
+#[derive(Debug)]
+enum StackMapFrame{
+    SameFrame,
+    SameLocals1StackItemFrame(VerificationTypeInfo),
+    SameLocals1StackItemFrameExtended(u16,VerificationTypeInfo),
+    ChopFrame(u16),
+    SameFrameExtended(u16),
+    AppendFrame(u16),
+    FullFrame(u16,Box<[VerificationTypeInfo]>,Box<[VerificationTypeInfo]>),
+}
+impl StackMapFrame{
+    pub fn read(f:&mut File,constant_items:&[ConstantItem])->Self{
+        let tag = read_u8(f);
+        match tag{
+            0..=63=>{
+                StackMapFrame::SameFrame
+            },
+            64..=127=>{
+                StackMapFrame::SameLocals1StackItemFrame(VerificationTypeInfo::read(f,constant_items))
+            },
+            128..=246=>panic!("invalid StackMapFrame tag:{tag}!"),
+            247=>{
+                StackMapFrame::SameLocals1StackItemFrameExtended(read_u16_be(f),VerificationTypeInfo::read(f,constant_items))
+            },
+            248..=250=>{
+                StackMapFrame::ChopFrame(read_u16_be(f))
+            },
+            251=>{
+                StackMapFrame::SameFrameExtended(read_u16_be(f))
+            },
+            252..=254=>{
+                todo!("StackMapFrame type AppendFrame is not supported yet!");
+            },
+            255=>{
+                todo!("StackMapFrame type FullFrame is not supported yet!");
+            }
+        }
+    }
+}
+#[derive(Debug)]
 pub enum Attribute{
     Code(Code),
     LineNumberTable(Box<[(u16,u16)]>),
@@ -49,6 +108,9 @@ impl Attribute{
                     lvt.push((start_pc,length,name,descrpitor,index));
                 }
                 Attribute::LocalVaraibleTable(lvt.into())
+            },
+            "StackMapTable"=>{
+                todo!("StackMapTable is not yet supported!");  
             },
             _=>panic!("Unsupported attribute:{name}!"),
         }
