@@ -1,19 +1,20 @@
-use crate::*;
-use crate::field::Field;
-use crate::method::Method;
+use crate::File;
+use crate::preprocessing::*;
+use field::Field;
+use method::Method;
 use constant_item::*;
 use access_flags::*;
 #[derive(Debug)]
 pub struct JavaClass{
     minor_version:u16,
     major_version:u16,
-    items:Box<[ConstantItem]>,
-    access_flags:ClassAccessFlags,
-    this_class:String,
-    super_class:String,
-    interfaces:Box<[String]>,
-    fields:Box<[Field]>,
-    methods:Box<[Method]>,
+    pub items:Box<[ConstantItem]>,
+    pub access_flags:ClassAccessFlags,
+    pub this_class:String,
+    pub super_class:String,
+    pub interfaces:Box<[String]>,
+    pub fields:Box<[Field]>,
+    pub methods:Box<[Method]>,
 }
 impl JavaClass{
     fn read_interafeces(interface_count:usize,constant_items:&[ConstantItem],f:&mut File)->Box<[String]>{

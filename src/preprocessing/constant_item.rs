@@ -1,4 +1,6 @@
-use crate::*;
+use crate::preprocessing::*;
+use std::fs::File;
+use std::io::Read;
 #[derive(Debug)]
 pub enum ConstantItem{
     MethodRef(u16,u16),

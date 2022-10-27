@@ -17,18 +17,5 @@ public class Main implements TestIface{
   public static void Main(String[] args){
       int a = 2 + 2;
       int b = a * a;
-      for(int i = 0; i < 10; i++){
-        b *= 2;
-      }
-       for(int i = 0; i < 100000; i-=10000){
-        b /= 2;
-      }
-      try{
-          String s = null;
-      }
-      catch(Exception e){
-      
-      }
-      System.out.println("Hello World");
   }
 }

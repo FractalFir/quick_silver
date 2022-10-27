@@ -1,8 +1,8 @@
 use std::fs::File;
-use crate::*;
-use crate::constant_item::ConstantItem;
-use crate::attribute::{read_attributes,Attribute};
-use crate::constant_item::{class_name_from_index,name_from_index,method_from_index,interface_method_from_index};
+use crate::preprocessing::*;
+use constant_item::ConstantItem;
+use attribute::{read_attributes,Attribute};
+use constant_item::{class_name_from_index,name_from_index,method_from_index,interface_method_from_index};
 // *n* field 
 // [n] stack form to
 // <n> local variable

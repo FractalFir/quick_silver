@@ -1,15 +1,11 @@
 use std::fs::*;
 use std::io::Read;
-mod constant_item;
-mod access_flags;
-mod java_class;
+mod context;
+mod class;
 mod field;
-mod io;
-mod attribute;
 mod method;
-mod code;
-use java_class::*;
-pub(crate) use io::*;
+mod preprocessing;
+use preprocessing::java_class::*;
 fn main() {
     let mut f = File::open("./Main.class").expect("Could not open file!");
     let class = JavaClass::from_file(&mut f).expect("Not a vaild Java class!");

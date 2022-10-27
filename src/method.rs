@@ -1,24 +1,16 @@
-use crate::access_flags::*;
-use crate::*;
-use java_class::*;
-use constant_item::*;
-use access_flags::*;
-use attribute::*;
-#[derive(Debug)]
-pub struct Method{
-    access_flags:MethodAccessFlags,
-    name:String,
-    descriptor:String,
-    attributes:Box<[Attribute]>,
+use inkwell::types::FunctionType;
+use crate::preprocessing::code::OpCode;
+enum MethodImpl<'a>{
+    JavaCode(Box<[(u32,OpCode)]>),
+    LLVMMethod(FunctionType<'a>),
 }
-impl Method{
-     pub fn read(f:&mut File,constant_items:&[ConstantItem])->Method{
-        let access_flags = MethodAccessFlags::from_u16(read_u16_be(f));
-        let name = crate::constant_item::name_from_index(read_u16_be(f),constant_items);
-        let descriptor = crate::constant_item::name_from_index(read_u16_be(f),constant_items);
-        let attribute_count = read_u16_be(f);
-        let attributes = read_attributes(attribute_count as usize,f,constant_items);
-        Self{access_flags,name,descriptor,attributes}
-     }
+struct Method<'a>{
+    args:Box<[u64]>,
+    ret:u64,
+    code:MethodImpl<'a>,
 }
-
+impl<'a> Method<'a>{
+    pub(crate) fn from_llvm(args:Box<[u64]>,ret:u64,llvm_fnc:FunctionType<'a>)->Self{
+        Self{args,ret,code:MethodImpl::LLVMMethod(llvm_fnc)}
+    }
+}
