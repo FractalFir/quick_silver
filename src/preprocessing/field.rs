@@ -6,10 +6,10 @@ use access_flags::*;
 use attribute::*;
 #[derive(Debug)]
 pub struct Field{
-    access_flags:FieldAccessFlags,
-    name:String,
-    descriptor:String,
-    attributes:Box<[Attribute]>,
+    pub access_flags:FieldAccessFlags,
+    pub name:String,
+    pub descriptor:String,
+    pub attributes:Box<[Attribute]>,
 }
 impl Field{
      pub fn read(f:&mut File,constant_items:&[ConstantItem])->Field{
@@ -19,5 +19,8 @@ impl Field{
         let attribute_count = read_u16_be(f);
         let attributes = read_attributes(attribute_count as usize,f,constant_items);
         Self{access_flags,name,descriptor,attributes}
+     }
+     pub fn is_static(&self)->bool{
+        self.access_flags.is_static()
      }
 }

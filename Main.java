@@ -3,6 +3,7 @@ interface TestIface{
 }
 public class Main implements TestIface{
   byte bite;
+  static int imt = 0;
   public short shurt  = -1;
   protected char car = 'u';
   private int mint = 883409000;
