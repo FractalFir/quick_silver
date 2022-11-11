@@ -1,5 +1,6 @@
 use crate::File;
-use crate::preprocessing::*;
+use crate::*;
+use std::io::{Write};
 use field::Field;
 use method::Method;
 use constant_item::*;
@@ -72,5 +73,18 @@ impl JavaClass{
         let methods = Self::read_methods(method_count as usize,&items,f);
         println!("field_count:{field_count}");
         return Some(Self{major_version,minor_version,items,access_flags,this_class,super_class,interfaces,fields,methods});
+    }
+    pub(crate) fn write_to_asm<T:Write>(&self,file:&mut T)->std::io::Result<()>{
+        let access = if self.access_flags.is_public(){"public"} else {""}; //TODO: handle all access flags
+        let name = &self.this_class;
+        writeln!(file,".class {access} {name} {{")?;
+        for fld in self.fields.iter(){
+            fld.write_to_asm(file)?;
+        }
+        for met in self.methods.iter(){
+            met.write_to_asm(file)?;
+        }
+        writeln!(file,"}}")?;
+        Ok(())
     }
 }

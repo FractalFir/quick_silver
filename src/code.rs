@@ -1,5 +1,5 @@
 use std::fs::File;
-use crate::preprocessing::*;
+use crate::*;
 use constant_item::ConstantItem;
 use attribute::{read_attributes,Attribute};
 use constant_item::{class_name_from_index,name_from_index,method_from_index,interface_method_from_index};
@@ -45,8 +45,41 @@ pub enum OpCode{
     AConstNull, // Pushes constant null object reference
     IInc(u16,i16), // Change local int var <*0*> by signed short *1*
 }
-
+//TODO:Change this to handle functions outside java standard library.
+fn convert_java_method_call_to_cli(class:&str,fname:&str,fsig:&str)->String{
+    match class{
+        "java/lang/Object"=>{
+            match fname{
+                "<init>"=>{
+                    match fsig{
+                        "()V"=>return "newobj instance void System.Object::.ctor()".to_owned(),
+                        _=>todo!("System.Object constructor takes no arguments and returns nothing!"),
+                    }
+                }
+                _=>todo!("Unsupported Object funtion {fname}!"),
+            }
+        }
+        _=>todo!("Unsupported java class {class}!"),
+    }
+}
 impl OpCode{
+     pub(crate) fn write_to_asm<T:Write>(&self,file:&mut T,index:u32)->std::io::Result<()>{
+        write!(file,"\t\tIL_{index}:")?;
+        match self{
+            Self::ALoad(i)=>write!(file,"ldloc.{i}\n"),
+            Self::InvokeSpecial(class,(function,sig))=>{
+                write!(file,"{}\n",convert_java_method_call_to_cli(class,function,sig))
+            },
+            Self::ConstIntVal(i)=>
+                if *i >=0{
+                    write!(file,"ldc.i4.{i}\n")
+                }
+                else{
+                    write!(file,"ldc.i4.m{}\n",i.abs())
+                }
+            _=>todo!("Opcode {self:?} can't be converted to cli opcode."),
+        }
+    }
     fn get_static(index:u16,constant_items:&[ConstantItem])->Self{
         OpCode::GetStatic(index) // TODO: change some statics which can be evaluated at compile time
         // to constant values.

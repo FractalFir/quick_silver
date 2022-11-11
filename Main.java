@@ -1,6 +1,9 @@
 interface TestIface{
   public void Test();
 }
+class SomeClass{
+  public int a;
+}
 public class Main implements TestIface{
   byte bite;
   static int imt = 0;
@@ -18,5 +21,7 @@ public class Main implements TestIface{
   public static void Main(String[] args){
       int a = 2 + 2;
       int b = a * a;
+      SomeClass s = new SomeClass();
+      s.a = -93;
   }
 }

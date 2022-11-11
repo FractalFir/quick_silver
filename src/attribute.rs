@@ -1,5 +1,5 @@
 use std::fs::File;
-use crate::preprocessing::*;
+use crate::*;
 use constant_item::ConstantItem;
 use code::*;
 #[derive(Debug)]
@@ -8,7 +8,6 @@ enum VerificationTypeInfo{
     IntegerVariable,
     FloatVariable,
     LongVariable,
-    DoubleVariable,
     NullVariable,
     UninitializedThisVaraible,
     ObjectVariable,
@@ -78,7 +77,7 @@ pub fn read_attributes(attribute_count:usize,f:&mut File,constant_items:&[Consta
 }
 impl Attribute{
      pub fn read(f:&mut File,constant_items:&[ConstantItem])->Self{
-        let name = crate::preprocessing::constant_item::name_from_index(read_u16_be(f),constant_items);
+        let name = crate::constant_item::name_from_index(read_u16_be(f),constant_items);
         let attribute_length = read_u32_be(f);
         match &name as &str{
             "Code"=>Attribute::Code(Code::read(f,constant_items)),
@@ -102,8 +101,8 @@ impl Attribute{
                 for _ in 0..local_variable_table_length{
                     let start_pc = read_u16_be(f);
                     let length = read_u16_be(f);
-                    let name = crate::preprocessing::constant_item::name_from_index(read_u16_be(f),constant_items);
-                    let descrpitor = crate::preprocessing::constant_item::name_from_index(read_u16_be(f),constant_items);
+                    let name = crate::constant_item::name_from_index(read_u16_be(f),constant_items);
+                    let descrpitor = crate::constant_item::name_from_index(read_u16_be(f),constant_items);
                     let index = read_u16_be(f);
                     lvt.push((start_pc,length,name,descrpitor,index));
                 }
