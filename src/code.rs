@@ -10,7 +10,7 @@ use constant_item::{class_name_from_index,name_from_index,method_from_index,inte
 pub enum OpCode{
     Nop,
     ConstIntVal(i32), // push const int *0* on the stack to [0]
-    PutField(u16), // set field *0* of [0] to [1]
+    PutField(String,(String,String)), // set field *0* of [0] to [1]
     GetField(u16), // get field *0* of [0] and pushes it to stack
     GetStatic(u16), // Gets static filed at *0* to [0]
     PutStatic(u16), // Set static *0* to [1]
@@ -45,30 +45,14 @@ pub enum OpCode{
     AConstNull, // Pushes constant null object reference
     IInc(u16,i16), // Change local int var <*0*> by signed short *1*
 }
-//TODO:Change this to handle functions outside java standard library.
-fn convert_java_method_call_to_cli(class:&str,fname:&str,fsig:&str)->String{
-    match class{
-        "java/lang/Object"=>{
-            match fname{
-                "<init>"=>{
-                    match fsig{
-                        "()V"=>return "newobj instance void System.Object::.ctor()".to_owned(),
-                        _=>todo!("System.Object constructor takes no arguments and returns nothing!"),
-                    }
-                }
-                _=>todo!("Unsupported Object funtion {fname}!"),
-            }
-        }
-        _=>todo!("Unsupported java class {class}!"),
-    }
-}
 impl OpCode{
-     pub(crate) fn write_to_asm<T:Write>(&self,file:&mut T,index:u32)->std::io::Result<()>{
+     pub(crate) fn write_to_asm<T:Write>(&self,file:&mut T,index:u32,mappings:&TypeMappings)->std::io::Result<()>{
         write!(file,"\t\tIL_{index}:")?;
         match self{
             Self::ALoad(i)=>write!(file,"ldloc.{i}\n"),
             Self::InvokeSpecial(class,(function,sig))=>{
-                write!(file,"{}\n",convert_java_method_call_to_cli(class,function,sig))
+                let cli_name = mappings.map_method(class,function,sig);
+                write!(file,"{}\n",cli_name)
             },
             Self::ConstIntVal(i)=>
                 if *i >=0{
@@ -188,7 +172,8 @@ impl OpCode{
                 181=>{
                     let field_index = read_u16_be(f);
                     code_offset += 2;
-                    OpCode::PutField(field_index)
+                    let fld = crate::constant_item::field_ref_from_index(field_index,constant_items);
+                    OpCode::PutField(fld.0,fld.1)
                 },
                 180=>{
                     let field_index = read_u16_be(f);

@@ -8,7 +8,7 @@
  					"b":"Bob"
  				},
  				{
- 					"<init>":{"V()":"void [System.Runtime]System.Object::.ctor()"}
+ 					"<init>":{"()V":"void [System.Runtime]System.Object::.ctor()"}
  				}
  			]},
  			"String":{"Class":[

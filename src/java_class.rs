@@ -82,7 +82,7 @@ impl JavaClass{
             fld.write_to_asm(file,mappings)?;
         }
         for met in self.methods.iter(){
-            met.write_to_asm(file)?;
+            met.write_to_asm(file,mappings)?;
         }
         writeln!(file,"}}")?;
         Ok(())

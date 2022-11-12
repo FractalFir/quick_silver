@@ -17,6 +17,14 @@ pub enum ConstantItem{
     Long(i64),
     Int(i32),
 }
+pub fn field_ref_from_index(index:u16,constant_items:&[ConstantItem])->(String,(String,String)){ 
+    let index = match &constant_items[(index as usize) - 1]{
+        ConstantItem::FieldRef(name_index,type_index)=>(name_index,type_index),
+        _=>panic!("Expected field ref to get data from but got {:?}",&constant_items[(index as usize) - 1]), //TODO: more precise error message
+    };
+    (class_name_from_index(*index.0,constant_items),name_and_type_from_index(*index.1,constant_items))
+
+}
 pub fn read_float_at_index(constant_items:&[ConstantItem])->f32{
     todo!();
 }
@@ -44,7 +52,7 @@ pub fn interface_method_from_index(index:u16,constant_items:&[ConstantItem])->(S
 pub fn name_and_type_from_index(index:u16,constant_items:&[ConstantItem])->(String,String){
     let index = match &constant_items[(index as usize) - 1]{
         ConstantItem::NameAndType(name_index,type_index)=>(name_index,type_index),
-        _=>panic!("Expected method ref to get data from but got {:?}",&constant_items[(index as usize) - 1]), //TODO: more precise error message
+        _=>panic!("Expected name_and type o get data from but got {:?}",&constant_items[(index as usize) - 1]), //TODO: more precise error message
     };
     (name_from_index(*index.0,constant_items),name_from_index(*index.1,constant_items))
 }

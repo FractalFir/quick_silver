@@ -38,7 +38,7 @@ impl Method{
         let attributes = read_attributes(attribute_count as usize,f,constant_items);
         Self{access_flags,name,descriptor,attributes}
      }
-     pub(crate) fn write_to_asm<T:Write>(&self,file:&mut T)->std::io::Result<()>{
+     pub(crate) fn write_to_asm<T:Write>(&self,file:&mut T,mappings:&TypeMappings)->std::io::Result<()>{
         let access = if self.access_flags.is_public(){"public"} else if  self.access_flags.is_private(){"private"} else if self.access_flags.is_protected(){"protected"} else {""};
         let sig = ("void","");
         let name = map_java_name_to_cli_name(&self.name);
@@ -47,7 +47,7 @@ impl Method{
          write!(file,"\t.method {access} {} {name}({}){{\n",sig.0,sig.1)?;
          write!(file,"\t.max_stack {}\n",code.max_stack)?;
          for (op,index) in code.code.iter(){
-            op.write_to_asm(file,*index);
+            op.write_to_asm(file,*index,mappings);
          }
          write!(file,"}}\n")
      }
