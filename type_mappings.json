@@ -1,0 +1,21 @@
+ {
+ 	"java":{"Namespace":{
+ 		"lang":{"Namespace":{
+ 			"Object":{"Class":[
+ 				"[System.Runtime]System.Object",
+ 				{
+ 					"a":"A",
+ 					"b":"Bob"
+ 				},
+ 				{
+ 					"<init>":{"V()":"void [System.Runtime]System.Object::.ctor()"}
+ 				}
+ 			]},
+ 			"String":{"Class":[
+ 				"[System.Runtime]System.String",
+ 				{},
+ 				{}
+ 			]}
+ 		}}
+ 	}}
+ }

@@ -74,12 +74,12 @@ impl JavaClass{
         println!("field_count:{field_count}");
         return Some(Self{major_version,minor_version,items,access_flags,this_class,super_class,interfaces,fields,methods});
     }
-    pub(crate) fn write_to_asm<T:Write>(&self,file:&mut T)->std::io::Result<()>{
+    pub(crate) fn write_to_asm<T:Write>(&self,file:&mut T,mappings:&TypeMappings)->std::io::Result<()>{
         let access = if self.access_flags.is_public(){"public"} else {""}; //TODO: handle all access flags
         let name = &self.this_class;
         writeln!(file,".class {access} {name} {{")?;
         for fld in self.fields.iter(){
-            fld.write_to_asm(file)?;
+            fld.write_to_asm(file,mappings)?;
         }
         for met in self.methods.iter(){
             met.write_to_asm(file)?;
