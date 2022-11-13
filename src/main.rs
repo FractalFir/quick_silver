@@ -19,15 +19,13 @@ fn write_assembly<T:Write>(classes:&[JavaClass],file:&mut T,asm_name:&str,mappin
     for class in classes{
         class.write_to_asm(file,mappings);
     }
-    write!(file,".method static void Main()\n{{\n.entrypoint\n.maxstack 1\nldstr \"Hello, World!\"\ncall void [mscorlib]System.Console::WriteLine(string)\nret\n}}")?;
     Ok(())
 }
 fn main() {
     let mappings = TypeMappings::from_file("./type_mappings.json");
-    let mut f = File::open("./Main.class").expect("Could not open file!");
-    let class = JavaClass::from_file(&mut f).expect("Not a vaild Java class!");
+    let class = JavaClass::in_directory(".");
     let mut out = File::create("./target/result.il").expect("Could not create output assembly!");
     println!("Java:{:?}",class);
-    write_assembly(&[class],&mut out,"TestAssembly",&mappings);
+    write_assembly(&class,&mut out,"TestAssembly",&mappings);
 
 }

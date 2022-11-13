@@ -1,10 +1,7 @@
-interface TestIface{
-  public void Test();
-}
 class SomeClass{
   public int a;
 }
-public class Main implements TestIface{
+public class Main{
   byte bite;
   static int imt = 0;
   public short shurt  = -1;
@@ -16,7 +13,7 @@ public class Main implements TestIface{
   String strong;
   boolean bull;
   public void Test(){
-  
+    return;
   }
   public static void Main(String[] args){
       int a = 2 + 2;

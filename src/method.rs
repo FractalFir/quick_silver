@@ -42,14 +42,19 @@ impl Method{
         let access = if self.access_flags.is_public(){"public"} else if  self.access_flags.is_private(){"private"} else if self.access_flags.is_protected(){"protected"} else {""};
         let sig = ("void","");
         let name = map_java_name_to_cli_name(&self.name);
-         // TODO: handle more access flags
+        // TODO: handle more access flags
+        let r#static = if(self.access_flags.is_static()){"static"}else{""};
         let code = self.get_code().expect(&format!("Method {} must have code!",self.name));
-         write!(file,"\t.method {access} {} {name}({}){{\n",sig.0,sig.1)?;
-         write!(file,"\t.max_stack {}\n",code.max_stack)?;
-         for (op,index) in code.code.iter(){
-            op.write_to_asm(file,*index,mappings);
-         }
-         write!(file,"}}\n")
+        write!(file,"\t.method {access} {static} {} {name}({}){{\n",sig.0,sig.1)?;
+        if(self.access_flags.is_static() && self.name == "Main"){
+             write!(file,"\t\t.entrypoint\n")?;
+        }
+        write!(file,"\t\t.maxstack {}\n",code.max_stack)?;
+        let mut iter = code.code.iter();
+        while let Some(op) = iter.next(){
+            op.0.write_to_asm(file,op.1,mappings,&mut iter);
+        }
+        write!(file,"}}\n")
      }
 }
 

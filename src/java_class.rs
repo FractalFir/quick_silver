@@ -46,7 +46,12 @@ impl JavaClass{
         let paths = std::fs::read_dir(path).expect("Could not get directory {path}");
         let mut res = Vec::new();
         for path in paths {
-            let mut f:File  = File::open(path.unwrap().path()).expect("Could not open file!");
+            let path = path.unwrap().path();
+            if(!path.display().to_string().ends_with(".class")){
+                println!("{path:?} not a java class! {}",path.ends_with(".class"));
+                continue;
+            }
+            let mut f:File  = File::open(path).expect("Could not open file!");
             res.push(Self::from_file(&mut f).expect("Not a vaild Java class!"));
         }
         res.into()

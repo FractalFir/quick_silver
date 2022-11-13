@@ -25,12 +25,12 @@ impl Field{
      }
      pub(crate) fn write_to_asm<T:Write>(&self,file:&mut T,mappings:&TypeMappings)->std::io::Result<()>{
         let access = if self.access_flags.is_public(){"public"} else {""}; //TODO: support all field attributes
-        let r#type = descriptor_to_cli_name(&self.descriptor,mappings);
+        let r#type = field_descriptor_to_cli_name(&self.descriptor,mappings);
         let name = &self.name;
         writeln!(file,"\t.field {access} {type} {name}")
      }
 }
-fn descriptor_to_cli_name(desc:&str,mappings:&TypeMappings)->String{
+pub fn field_descriptor_to_cli_name(desc:&str,mappings:&TypeMappings)->String{
     let mut chars = desc.chars();
     match chars.nth(0).expect("Filed type descriptor can't be less than 1 charcters!"){
         'B'=>"int8".to_owned(),
@@ -39,6 +39,7 @@ fn descriptor_to_cli_name(desc:&str,mappings:&TypeMappings)->String{
         'I'=>"int32".to_owned(),
         'F'=>"float32".to_owned(),
         'Z'=>"bool".to_owned(),
+        'V'=>"void".to_owned(),
         'L'=>{
             chars.next_back(); //remove ; from the end of class name
             format!("class {}",mappings.map_class(chars.as_str()))

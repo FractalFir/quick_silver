@@ -6,17 +6,18 @@ use constant_item::{class_name_from_index,name_from_index,method_from_index,inte
 // *n* field 
 // [n] stack form to
 // <n> local variable
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum OpCode{
     Nop,
     ConstIntVal(i32), // push const int *0* on the stack to [0]
     PutField(String,(String,String)), // set field *0* of [0] to [1]
     GetField(u16), // get field *0* of [0] and pushes it to stack
     GetStatic(u16), // Gets static filed at *0* to [0]
-    PutStatic(u16), // Set static *0* to [1]
-    PushByte(u8), // pushes byte *0* to [0]
-    PushShort(u16), // pushes short *0* to [0]
-    LoadConstant(u16), // loads constant at field *0* and pushes it to [0]
+    PutStatic(String,(String,String)), // Set static *0* to [1]
+    PushByte(i8), // pushes byte *0* to [0]
+    PushShort(i16), // pushes short *0* to [0]
+    LoadFloat(f32),
+    LoadInt(i32),
     RetVoid, // Returns void from a method
     RetLong, // Returns long from a method
     RetA,// Returns an object reference from a method
@@ -40,27 +41,54 @@ pub enum OpCode{
     Ba, // get boolean value [1] from array [0]
     IfEq(i16), // Checks if [0] is zero, and if so, jump by i16 *0*
     IfLe(i16), // Checks if [0] is less than 0, and if so jump by i16 *0*
-    IfCmpGE(i16), // Checks if [0] is greater on equal to [1], and if so jump by i16 *0*
+    IfCmpGE(i16), // Checks if [0] is greater on equal to [1], and if so jump to i16 *0*
+    IfCmpNE(i16), // Checks if [0] is greater on equal to [1], and if so jump to i16 *0*
     GoTo(i32), // Unconditionally jumps by *0*  
     AConstNull, // Pushes constant null object reference
     IInc(u16,i16), // Change local int var <*0*> by signed short *1*
 }
 impl OpCode{
-     pub(crate) fn write_to_asm<T:Write>(&self,file:&mut T,index:u32,mappings:&TypeMappings)->std::io::Result<()>{
+     pub(crate) fn write_to_asm<'a,T:Write,Iter:Iterator<Item = &'a (OpCode, u32)>>(&self,file:&mut T, index:u32, mappings:&TypeMappings, iter:&mut Iter)->std::io::Result<()>{
         write!(file,"\t\tIL_{index}:")?;
         match self{
             Self::ALoad(i)=>write!(file,"ldloc.{i}\n"),
             Self::InvokeSpecial(class,(function,sig))=>{
                 let cli_name = mappings.map_method(class,function,sig);
-                write!(file,"{}\n",cli_name)
+                write!(file,"call {}\n",cli_name)
             },
-            Self::ConstIntVal(i)=>
-                if *i >=0{
-                    write!(file,"ldc.i4.{i}\n")
+            Self::ConstIntVal(i)=>write!(file,"ldc.i4 {i}\n"),
+            Self::PutStatic(class,(name,descriptor))=>{
+                let mapping = mappings.map_field(class,name,descriptor);
+                write!(file,"stfld {} {} \n",mapping.0,mapping.1)
+            },
+            Self::PutField(class,(name,descriptor))=>{
+                let mapping = mappings.map_field(class,name,descriptor);
+                write!(file,"stfld {} {} \n",mapping.0,mapping.1)
+            },
+            Self::PushByte(val)=>write!(file,"ldc.i4.s {val}\n"),
+            Self::LoadInt(val)=>write!(file,"ldc.i4 {val}\n"),
+            Self::LoadFloat(val)=>write!(file,"ldc.r4 {val}\n"),
+            Self::RetVoid=>write!(file,"ret\n"),
+            Self::IStore(index)=>write!(file,"stloc {index}\n"),
+            Self::AStore(index)=>write!(file,"stloc {index}\n"),
+            Self::ILoad(index)=>write!(file,"ldloc.{index}\n"),
+            Self::IMul=>write!(file,"mul\n"),
+            Self::New(class)=>{
+                let dup = iter.next().expect("after new object allocation dup instruction is expected, but got nothing!");
+                match dup.0{
+                    Self::Dup=>(),
+                    _=>panic!("after new object allocation dup instruction is expected, but got {dup:?}!"),
+                };
+                let c_call = iter.next().expect("after new object allocation and pointer duplication a constructor call is expected, but got nothing!");
+                match &c_call.0{
+                    Self::InvokeSpecial(cls,(function,sig))=>{
+                        assert!(cls == class,"Name of class of new allocated object must match name of constructor!");
+                        let cli_name = mappings.map_method(class,function,sig);
+                        write!(file,"newobj instance {}\n",cli_name)
+                    },
+                    _=>panic!("after new object allocation dup instruction is expected, but got {dup:?}!"),
                 }
-                else{
-                    write!(file,"ldc.i4.m{}\n",i.abs())
-                }
+            },
             _=>todo!("Opcode {self:?} can't be converted to cli opcode."),
         }
     }
@@ -69,7 +97,12 @@ impl OpCode{
         // to constant values.
     }  
     fn load_constant(index:u16,constant_items:&[ConstantItem])->Self{
-        OpCode::LoadConstant(index) // TODO: change some constants to values.
+        let item = &constant_items[(index - 1) as usize];
+        match item{
+            ConstantItem::Float(value)=>Self::LoadFloat(*value),
+            ConstantItem::Int(value)=>Self::LoadInt(*value),
+            _=>panic!("Unhandled constant in load constant instruction: \"{item:?}\"."),
+        }
     }
     pub fn read_opcodes(f:&mut File,mut code_length:u32,constant_items:&[ConstantItem])->Box<[(Self,u32)]>{
        let mut res = Vec::with_capacity(code_length as usize);
@@ -85,11 +118,11 @@ impl OpCode{
                 2..=8=>OpCode::ConstIntVal((opCode as i8 - 3) as i32),
                 16=>{
                     code_offset += 1;
-                    OpCode::PushByte(read_u8(f))
+                    OpCode::PushByte(read_i8(f))
                 },
                 17=>{
                     code_offset += 2;
-                    OpCode::PushShort(read_u16_be(f))
+                    OpCode::PushShort(read_i16_be(f))
                 },
                 18=>{
                     code_offset += 1;
@@ -147,6 +180,11 @@ impl OpCode{
                     let offset = read_i16_be(f);
                     OpCode::IfLe(offset)
                 },
+                160=>{
+                    code_offset += 2;
+                    let offset = read_i16_be(f);
+                    OpCode::IfCmpNE(offset)
+                },
                 162=>{
                     code_offset += 2;
                     let offset = read_i16_be(f);
@@ -165,9 +203,10 @@ impl OpCode{
                     Self::get_static(read_u16_be(f),constant_items)
                 },
                 179=>{
-                    let static_field_index = read_u16_be(f);
+                    let field_index = read_u16_be(f);
                     code_offset += 2;
-                    OpCode::PutStatic(static_field_index)
+                    let fld = crate::constant_item::field_ref_from_index(field_index,constant_items);
+                    OpCode::PutStatic(fld.0,fld.1)
                 },
                 181=>{
                     let field_index = read_u16_be(f);
