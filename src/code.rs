@@ -6,18 +6,85 @@ use constant_item::{class_name_from_index,name_from_index,method_from_index,inte
 // *n* field 
 // [n] stack form to
 // <n> local variable
+#[repr(u8)]#[derive(Debug,Clone,Copy)]
+pub enum LocalVar{
+    Int = 0,
+    Object = 1,
+}
+const LOC_VAR_COUNT:usize = 2;
+impl LocalVar{
+    pub fn from_usize(input:usize)->Self{
+        match input{
+            0=>Self::Int,
+            1=>Self::Object,
+            _=>panic!("usize is not a valid LocalVar Type!"),
+        }
+    }
+}
+#[derive(Debug)]
+pub struct LocalVars{
+    vars:Vec<[Option<usize>;LOC_VAR_COUNT]>,
+    var_count:usize,
+}
+impl LocalVars{
+    pub fn init()->Self{Self{vars:Vec::new(),var_count:0}}
+    pub fn get_loc_var(&self,loc:LocalVar,pos:usize)->Option<usize>{
+        println!("G {pos}:{loc:?}");
+        //There is a bug somewhere here which causes everything to go south
+        if self.vars.len() <= pos{panic!("{loc:?},{pos}")}
+        else {self.vars[pos][loc as usize]}
+    }
+    pub fn get_or_alloc_loc_var(&mut self,loc:LocalVar,pos:usize)->usize{
+        println!("GOA {pos}:{loc:?}");
+        if self.vars.len() <= pos{
+            for _ in self.vars.len()..(pos + 1){
+                self.vars.push([None;LOC_VAR_COUNT]);
+            }
+        }
+        let var = self.vars[pos][loc as usize];
+        match var{
+            Some(val)=>val,
+            None=>{
+                let val = self.var_count;
+                self.var_count+=1;
+                self.vars[pos][loc as usize] = Some(val);
+                val
+            }
+        }
+    }
+    pub fn write_dotlocals<T:Write>(&self,file:&mut T)->std::io::Result<()>{
+        write!(file,".locals init(")?;
+        for vars in &self.vars{
+            for i in 0..LOC_VAR_COUNT{
+                match vars[i]{
+                    None=>(),
+                    Some(var)=>{
+                        match (LocalVar::from_usize(i)){
+                            Int=>write!(file,"[{var}] int32 v{var:x}")?,
+                            Obj=>write!(file,"[{var}] object v{var:x}")?,
+                            _=>todo!(),
+                        }
+                    }
+                }
+                //if (i < LOC_VAR_COUNT - 1 && i > 0){write!(file,",")?}
+            }
+        }
+        write!(file,")\n")
+    }
+}
 #[derive(Debug,Clone)]
 pub enum OpCode{
     Nop,
     ConstIntVal(i32), // push const int *0* on the stack to [0]
     PutField(String,(String,String)), // set field *0* of [0] to [1]
     GetField(u16), // get field *0* of [0] and pushes it to stack
-    GetStatic(u16), // Gets static filed at *0* to [0]
+    GetStatic(String,(String,String)), // Gets static filed at *0* to [0]
     PutStatic(String,(String,String)), // Set static *0* to [1]
     PushByte(i8), // pushes byte *0* to [0]
     PushShort(i16), // pushes short *0* to [0]
     LoadFloat(f32),
     LoadInt(i32),
+    LoadString(String),
     RetVoid, // Returns void from a method
     RetLong, // Returns long from a method
     RetA,// Returns an object reference from a method
@@ -28,6 +95,7 @@ pub enum OpCode{
     ILoad(u16), // Load i32 <*0*> into [0]
     LLoad(u16),// Load i64 <*0*> into [0]
     IMul, // Multiply i32 [0] by [1] and write int to [0]
+    IAdd, // Add i32 [0] by [1] and write int to [0]
     IDiv, // Divide i32 [0] by [1] and write int to [0]
     InvokeVirtual(String,(String,String)), // invokes virtual method *0* on object [0]
     InvokeInterface(String,(String,String)), // invokes interface method *0* on object [0]
@@ -48,10 +116,10 @@ pub enum OpCode{
     IInc(u16,i16), // Change local int var <*0*> by signed short *1*
 }
 impl OpCode{
-     pub(crate) fn write_to_asm<'a,T:Write,Iter:Iterator<Item = &'a (OpCode, u32)>>(&self,file:&mut T, index:u32, mappings:&TypeMappings, iter:&mut Iter)->std::io::Result<()>{
+     pub(crate) fn write_to_asm<'a,T:Write,Iter:Iterator<Item = &'a (OpCode, u32)>>(&self,file:&mut T, index:u32, mappings:&TypeMappings, iter:&mut Iter,lv:&mut LocalVars)->std::io::Result<()>{
         write!(file,"\t\tIL_{index}:")?;
         match self{
-            Self::ALoad(i)=>write!(file,"ldloc.{i}\n"),
+            Self::ALoad(i)=>write!(file,"ldloc {}\n",lv.get_or_alloc_loc_var(LocalVar::Object,*i as usize)),
             Self::InvokeSpecial(class,(function,sig))=>{
                 let cli_name = mappings.map_method(class,function,sig);
                 write!(file,"call {}\n",cli_name)
@@ -61,6 +129,10 @@ impl OpCode{
                 let mapping = mappings.map_field(class,name,descriptor);
                 write!(file,"stfld {} {} \n",mapping.0,mapping.1)
             },
+            Self::GetStatic(class,(name,descriptor))=>{
+                let mapping = mappings.map_field(class,name,descriptor);
+                write!(file,"ldfld {} {} \n",mapping.0,mapping.1)
+            },
             Self::PutField(class,(name,descriptor))=>{
                 let mapping = mappings.map_field(class,name,descriptor);
                 write!(file,"stfld {} {} \n",mapping.0,mapping.1)
@@ -69,10 +141,19 @@ impl OpCode{
             Self::LoadInt(val)=>write!(file,"ldc.i4 {val}\n"),
             Self::LoadFloat(val)=>write!(file,"ldc.r4 {val}\n"),
             Self::RetVoid=>write!(file,"ret\n"),
-            Self::IStore(index)=>write!(file,"stloc {index}\n"),
-            Self::AStore(index)=>write!(file,"stloc {index}\n"),
-            Self::ILoad(index)=>write!(file,"ldloc.{index}\n"),
+            Self::IStore(index)=>write!(file,"stloc {}\n",lv.get_or_alloc_loc_var(LocalVar::Int,*index as usize)),
+            Self::AStore(index)=>write!(file,"stloc {}\n",lv.get_or_alloc_loc_var(LocalVar::Object,*index as usize)),
+            Self::ILoad(index)=>write!(file,"ldloc {}\n",lv.get_loc_var(LocalVar::Object,*index as usize).expect("Local varaible used before initialized!")),
             Self::IMul=>write!(file,"mul\n"),
+            /*
+            Self::IInc(index,val)=>{
+                //TODO:fix this
+                write!(file,"ldloc {}\n",lv.get_loc_var(LocalVar::Object,*index as usize).expect("Local varaible used before initialized!"))?;
+                write!(file,"ldc.i4 {val}\n")?;
+                write!(file,"add\n")?;
+                write!(file,"stloc {}\n",lv.get_or_alloc_loc_var(LocalVar::Int,*index as usize))
+            },
+            */
             Self::New(class)=>{
                 let dup = iter.next().expect("after new object allocation dup instruction is expected, but got nothing!");
                 match dup.0{
@@ -92,15 +173,13 @@ impl OpCode{
             _=>todo!("Opcode {self:?} can't be converted to cli opcode."),
         }
     }
-    fn get_static(index:u16,constant_items:&[ConstantItem])->Self{
-        OpCode::GetStatic(index) // TODO: change some statics which can be evaluated at compile time
-        // to constant values.
-    }  
+
     fn load_constant(index:u16,constant_items:&[ConstantItem])->Self{
         let item = &constant_items[(index - 1) as usize];
         match item{
             ConstantItem::Float(value)=>Self::LoadFloat(*value),
             ConstantItem::Int(value)=>Self::LoadInt(*value),
+            ConstantItem::String(value)=>Self::LoadString(crate::constant_item::name_from_index(*value,constant_items)),
             _=>panic!("Unhandled constant in load constant instruction: \"{item:?}\"."),
         }
     }
@@ -162,6 +241,7 @@ impl OpCode{
                 84=>OpCode::Ba,
                 87=>OpCode::Pop,
                 89=>OpCode::Dup,
+                96=>OpCode::IAdd,
                 104=>OpCode::IMul,
                 108=>OpCode::IDiv,
                 132=>{
@@ -199,8 +279,10 @@ impl OpCode{
                 176=>OpCode::RetA,
                 177=>OpCode::RetVoid,
                 178=>{
+                    let field_index = read_u16_be(f);
                     code_offset += 2;
-                    Self::get_static(read_u16_be(f),constant_items)
+                    let fld = crate::constant_item::field_ref_from_index(field_index,constant_items);
+                    OpCode::GetStatic(fld.0,fld.1)
                 },
                 179=>{
                     let field_index = read_u16_be(f);

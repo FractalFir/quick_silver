@@ -51,9 +51,11 @@ impl Method{
         }
         write!(file,"\t\t.maxstack {}\n",code.max_stack)?;
         let mut iter = code.code.iter();
+        let mut loc_vars = crate::code::LocalVars::init();
         while let Some(op) = iter.next(){
-            op.0.write_to_asm(file,op.1,mappings,&mut iter);
+            op.0.write_to_asm(file,op.1,mappings,&mut iter,&mut loc_vars);
         }
+        loc_vars.write_dotlocals(file)?;
         write!(file,"}}\n")
      }
 }

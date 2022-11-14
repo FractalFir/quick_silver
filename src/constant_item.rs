@@ -56,6 +56,7 @@ pub fn name_and_type_from_index(index:u16,constant_items:&[ConstantItem])->(Stri
     };
     (name_from_index(*index.0,constant_items),name_from_index(*index.1,constant_items))
 }
+//change to string_from_index
 pub fn name_from_index(index:u16,constant_items:&[ConstantItem])->String{
     match &constant_items[(index as usize) - 1]{
         ConstantItem::UTF8(class_name)=>class_name.to_owned(),
